@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17695C">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Day's End">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Day's End</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column built for a phone held at night. Date header with a week strip,
+   the eight questions as open blocks divided by hairlines, bottom tab bar for Today / Week / History / Settings.
+   One teal accent for every selected state so nothing reads as pass or fail. */
+:root {
+  --bg: #EDF1EF; --surface: #F8FAF9; --ink: #14211D; --muted: #5B6C66; --line: #D3DCD8;
+  --accent: #17695C; --accent-ink: #FFFFFF; --accent-soft: #D6EBE5; --warm: #85560F; --warm-soft: #F3E6CC;
+  --bad: #A3362B;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E1513; --surface: #151F1C; --ink: #E4EEEA; --muted: #8A9E97; --line: #25332E;
+    --accent: #63C7B3; --accent-ink: #08201B; --accent-soft: #1B3A33; --warm: #E3B866; --warm-soft: #2E2614;
+    --bad: #F08A7E;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-inline: 16px; padding-top: calc(8px + env(safe-area-inset-top, 0px)); padding-bottom: 108px; }
+.wrap { max-width: 560px; margin-inline: auto; }
+button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+[hidden] { display: none !important; }
+
+.top { padding-block: 12px 4px; }
+.datenav { display: flex; align-items: center; gap: 8px; }
+.datenav .mid { flex: 1; min-width: 0; text-align: center; }
+.arrow { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 22px; line-height: 1; display: grid; place-items: center; }
+.arrow:disabled { opacity: .35; cursor: default; }
+.dlabel, .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1, h2 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; }
+h1 { font-size: 26px; line-height: 1.15; }
+h2 { font-size: 22px; line-height: 1.2; }
+.strip { display: flex; gap: 6px; margin-top: 14px; }
+.strip button { flex: 1; min-width: 0; padding: 6px 0; border-radius: 10px; border: 1px solid transparent; background: transparent; display: grid; gap: 4px; justify-items: center; }
+.strip .dow { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.strip .dot { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.strip .filled .dot { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.strip .sel { border-color: var(--accent); }
+.strip button:disabled { opacity: .35; cursor: default; }
+.status { min-height: 20px; font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; font-family: var(--font-mono); }
+.syncline { text-align: center; font-size: 13px; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+.syncline button { border: 0; background: transparent; color: var(--accent); text-decoration: underline; padding: 6px; font: inherit; }
+.banner { background: var(--warm-soft); color: var(--warm); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin-top: 8px; }
+
+.plan { background: var(--warm-soft); border-radius: 12px; padding: 12px 14px; margin-top: 16px; }
+.plan .eyebrow { color: var(--warm); }
+.plan p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.q { padding-block: 20px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.q:first-of-type { border-top: 0; }
+.q > label, .q > .ql { font-family: var(--font-display); font-weight: 500; font-size: 18px; line-height: 1.3; text-wrap: balance; }
+.hint { font-size: 13px; color: var(--muted); margin: -4px 0 0; }
+textarea, input[type="text"], input[type="search"] { width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; resize: none; }
+textarea { min-height: 52px; overflow: hidden; }
+textarea::placeholder, input::placeholder { color: var(--muted); opacity: .8; }
+.rows { display: grid; gap: 8px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.row .rl { font-weight: 500; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; border-radius: 999px; padding: 8px 14px; min-height: 40px; font-size: 15px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; color: var(--muted); min-height: 36px; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.chip.static { cursor: default; color: var(--ink); }
+
+.tabs { position: fixed; inset-inline: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); display: flex; justify-content: center; padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 4px; }
+.tabs button { flex: 1; max-width: 140px; border: 0; background: transparent; border-radius: 12px; padding: 10px 0; font-weight: 500; font-size: 15px; color: var(--muted); min-height: 44px; }
+.tabs button[aria-current="page"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+
+.view-head { padding-block: 16px 8px; display: grid; gap: 4px; }
+.pager { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 8px 16px; min-height: 44px; font-size: 15px; }
+.btn:disabled { opacity: .4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); text-decoration: underline; padding-inline: 4px; }
+.block { padding-block: 18px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.block h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 17px; }
+.block p { margin: 0; }
+.small { font-size: 14px; color: var(--muted); }
+.err { color: var(--bad); font-size: 14px; }
+.metric { display: grid; grid-template-columns: 76px 1fr auto; gap: 10px; align-items: center; }
+.metric .rl { font-size: 15px; }
+.metric .n { font-family: var(--font-mono); font-size: 14px; font-variant-numeric: tabular-nums; }
+.sq { display: flex; gap: 4px; }
+.sq span { flex: 1; min-width: 0; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); }
+.sq .y { background: var(--accent); border-color: var(--accent); }
+.sq .s { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); border-color: var(--accent); }
+.sq .n0 { border-color: var(--muted); }
+.sq .x { border-style: dashed; opacity: .6; }
+.sqd { display: flex; gap: 4px; margin-top: 2px; }
+.sqd span { flex: 1; text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.legend { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.items li { display: grid; gap: 2px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.items .when { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.empty { color: var(--muted); font-size: 15px; padding-block: 18px; }
+.prompt { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-size: 15px; }
+
+details.entry { border-top: 1px solid var(--line); padding-block: 12px; }
+details.entry summary { cursor: pointer; display: grid; gap: 2px; list-style: none; }
+details.entry summary::-webkit-details-marker { display: none; }
+details.entry .sd { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+details.entry .st { font-weight: 500; overflow-wrap: anywhere; }
+.full { display: grid; gap: 10px; margin-top: 10px; font-size: 15px; }
+.full b { font-weight: 600; display: block; font-size: 13px; color: var(--muted); font-family: var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
+.full p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: no-preference) { .seg button, .chip, .strip .dot { transition: background .15s, color .15s, border-color .15s; } }
+</style>
+<script src="config.js"></script>
+<script src="docsync.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div id="view-today">
+    <header class="top">
+      <div class="datenav">
+        <button class="arrow" id="prev" type="button" aria-label="Previous day">&#8249;</button>
+        <div class="mid"><div class="dlabel" id="dlabel">Today</div><h1 id="dtitle">&nbsp;</h1></div>
+        <button class="arrow" id="next" type="button" aria-label="Next day">&#8250;</button>
+      </div>
+      <div class="strip" id="strip"></div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <div class="syncline" id="syncline" hidden></div>
+      <div class="banner" id="banner" hidden></div>
+    </header>
+
+    <div class="plan" id="plan" hidden>
+      <div class="eyebrow">The day before, you wanted to</div>
+      <p id="plan-text"></p>
+    </div>
+
+    <form id="form" autocomplete="off" onsubmit="return false">
+      <section class="q">
+        <label for="proud">What did I do today that makes me happy or proud?</label>
+        <textarea id="proud" data-f="proud" rows="2"></textarea>
+      </section>
+
+      <section class="q">
+        <label for="other">What are the other things I did today?</label>
+        <p class="hint">A rough list is enough.</p>
+        <textarea id="other" data-f="other" rows="2"></textarea>
+      </section>
+
+      <section class="q">
+        <label for="better">What could I have done better today?</label>
+        <p class="hint">Finish with what you would do differently.</p>
+        <textarea id="better" data-f="better" rows="2"></textarea>
+      </section>
+
+      <section class="q">
+        <div class="ql">Did I take care of my body and health?</div>
+        <div class="rows">
+          <div class="row"><span class="rl">Exercise</span>
+            <div class="seg" data-seg="move" role="group" aria-label="Exercise">
+              <button type="button" data-v="yes">Yes</button><button type="button" data-v="sofar">So-so</button><button type="button" data-v="no">No</button></div></div>
+          <div class="row"><span class="rl">Sleep</span>
+            <div class="seg" data-seg="sleep" role="group" aria-label="Sleep">
+              <button type="button" data-v="yes">Yes</button><button type="button" data-v="sofar">So-so</button><button type="button" data-v="no">No</button></div></div>
+          <div class="row"><span class="rl">Eating</span>
+            <div class="seg" data-seg="eat" role="group" aria-label="Eating">
+              <button type="button" data-v="yes">Yes</button><button type="button" data-v="sofar">So-so</button><button type="button" data-v="no">No</button></div></div>
+        </div>
+      </section>
+
+      <section class="q">
+        <div class="ql">Did I do something outside my comfort zone?</div>
+        <div><div class="seg" data-seg="comfort" role="group" aria-label="Comfort zone"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>
+        <textarea id="comfortWhat" data-f="comfortWhat" rows="1" placeholder="What was it?" aria-label="What was outside your comfort zone"></textarea>
+      </section>
+
+      <section class="q">
+        <div class="ql">Did I do something nice that would have made someone happy?</div>
+        <div><div class="seg" data-seg="kind" role="group" aria-label="Kindness"><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></div></div>
+        <textarea id="kindWhat" data-f="kindWhat" rows="1" placeholder="What, and for whom?" aria-label="What nice thing you did"></textarea>
+      </section>
+
+      <section class="q">
+        <label for="feel">How am I feeling today?</label>
+        <p class="hint">Pick one to three words.</p>
+        <div class="chips" id="chips"></div>
+        <input type="text" id="feel" data-f="feel" placeholder="Or write your own words" aria-label="Feeling words">
+      </section>
+
+      <section class="q">
+        <label for="tomorrow">What would I like to do tomorrow?</label>
+        <p class="hint">Tomorrow's page will show this at the top.</p>
+        <textarea id="tomorrow" data-f="tomorrow" rows="2"></textarea>
+      </section>
+    </form>
+  </div>
+
+  <div id="view-week" hidden>
+    <div class="view-head">
+      <div class="eyebrow">Weekly review</div>
+      <h2 id="wk-title">Last 7 days</h2>
+      <div class="pager"><button class="btn" id="wk-prev" type="button">Earlier week</button><button class="btn" id="wk-next" type="button">Later week</button></div>
+    </div>
+    <div id="wk-body"></div>
+  </div>
+
+  <div id="view-history" hidden>
+    <div class="view-head">
+      <div class="eyebrow">All entries</div>
+      <h2>History</h2>
+      <input type="search" id="search" placeholder="Search your entries" aria-label="Search entries" style="margin-top:8px">
+    </div>
+    <div id="hist-body"></div>
+  </div>
+
+  <div id="view-settings" hidden>
+    <div class="view-head">
+      <div class="eyebrow">Settings</div>
+      <h2>Your journal</h2>
+      <p class="small">Entries are stored on this device only, in this browser. Nothing is sent to a server unless you turn on Google Doc sync.</p>
+    </div>
+
+    <div class="block" id="set-google">
+      <h3>Google Doc sync</h3>
+      <div id="set-google-body"></div>
+    </div>
+
+    <div class="block">
+      <h3>Backup</h3>
+      <p class="small">A backup file holds every entry. Keep one somewhere safe, or turn on Google Doc sync. If this browser's data is cleared, entries on this device are lost.</p>
+      <div class="pager">
+        <button class="btn" id="bk-export" type="button">Save backup file</button>
+        <button class="btn" id="bk-import" type="button">Restore from backup</button>
+        <button class="btn" id="bk-text" type="button">Save as readable text</button>
+      </div>
+      <input type="file" id="bk-file" accept="application/json,.json" hidden>
+      <div class="small" id="bk-msg" role="status"></div>
+    </div>
+
+    <div class="block">
+      <h3>Add to your home screen</h3>
+      <p class="small" id="install-tip"></p>
+      <div class="pager"><button class="btn primary" id="install-btn" type="button" hidden>Install the app</button></div>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="Sections">
+  <button type="button" data-tab="today" aria-current="page">Today</button>
+  <button type="button" data-tab="week">Week</button>
+  <button type="button" data-tab="history">History</button>
+  <button type="button" data-tab="settings">Settings</button>
+</nav>
+
+<script>
+(function () {
+  var CFG = window.DAYEND_CONFIG || {};
+  var TEXT = ['proud', 'other', 'better', 'comfortWhat', 'kindWhat', 'feel', 'tomorrow'];
+  var SEGS = ['move', 'sleep', 'eat', 'comfort', 'kind'];
+  var WORDS = ['calm', 'grateful', 'content', 'energised', 'hopeful', 'proud', 'curious', 'tired', 'restless', 'anxious', 'stretched', 'scattered', 'flat', 'irritable'];
+  var DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var K_ENTRIES = 'dayend:v1:entries', K_META = 'dayend:v1:meta';
+  var SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function keyOf(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parse(k) { var p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(k, n) { var d = parse(k); d.setDate(d.getDate() + n); return keyOf(d); }
+  function defaultDate() { var d = new Date(); if (d.getHours() < 4) d.setDate(d.getDate() - 1); return keyOf(d); }
+  function pretty(k) { var d = parse(k); return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function short(k) { var d = parse(k); return DAYS[d.getDay()].slice(0, 3) + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3); }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  /* ---------- storage (this device only) ---------- */
+  var memStore = {}, storageOk = true;
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { storageOk = false; return memStore[k] || null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { storageOk = false; memStore[k] = v; } }
+  function loadJSON(k, d) { try { var v = JSON.parse(lsGet(k) || 'null'); return v && typeof v === 'object' ? v : d; } catch (e) { return d; } }
+
+  var TODAY = defaultDate();
+  var state = { date: TODAY, tab: 'today', weekOffset: 0, histLimit: 40 };
+  var entries = loadJSON(K_ENTRIES, {});
+  var meta = loadJSON(K_META, {});
+  meta.synced = meta.synced || {};
+  function saveEntries() { lsSet(K_ENTRIES, JSON.stringify(entries)); }
+  function saveMeta() { lsSet(K_META, JSON.stringify(meta)); }
+
+  function isEmpty(e) { return DocSync.isEmptyEntry(e); }
+  var dirty = false, inflight = false, timer = null;
+
+  /* ---------- form ---------- */
+  function autosize(t) { t.style.height = 'auto'; t.style.height = Math.max(t.scrollHeight + 2, 52) + 'px'; }
+  function getSeg(name) { var g = $('[data-seg="' + name + '"]'); var b = $('[aria-pressed="true"]', g); return b ? b.getAttribute('data-v') : ''; }
+  function setSeg(name, v) { $$('[data-seg="' + name + '"] button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === v ? 'true' : 'false'); }); }
+  function readForm() {
+    var o = {};
+    TEXT.forEach(function (f) { o[f] = $('[data-f="' + f + '"]').value.trim(); });
+    SEGS.forEach(function (f) { o[f] = getSeg(f); });
+    return o;
+  }
+  function fillForm(e) {
+    TEXT.forEach(function (f) { var el = $('[data-f="' + f + '"]'); el.value = (e && e[f]) || ''; if (el.tagName === 'TEXTAREA') autosize(el); });
+    SEGS.forEach(function (f) { setSeg(f, (e && e[f]) || ''); });
+    syncChips();
+  }
+  function feelWords() { return $('#feel').value.split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean); }
+  function syncChips() {
+    var w = feelWords();
+    $$('#chips .chip').forEach(function (c) { c.setAttribute('aria-pressed', w.indexOf(c.getAttribute('data-w')) > -1 ? 'true' : 'false'); });
+  }
+  function buildChips() {
+    $('#chips').innerHTML = WORDS.map(function (w) { return '<button type="button" class="chip" data-w="' + w + '" aria-pressed="false">' + w + '</button>'; }).join('');
+  }
+  function setStatus(t) { $('#status').textContent = t; }
+
+  function schedule() { dirty = true; setStatus('Saving…'); clearTimeout(timer); timer = setTimeout(flush, 500); }
+  function flush() {
+    timer = null;
+    if (!dirty) return;
+    dirty = false;
+    var date = state.date, data = readForm();
+    if (isEmpty(data) && isEmpty(entries[date])) { setStatus(''); return; }
+    data.date = date; data.updated = Date.now();
+    entries[date] = data; saveEntries();
+    setStatus(storageOk ? 'Saved on this device' : 'Could not save. Storage is blocked in this browser.');
+    renderStrip(); renderPlan(); renderSyncUI();
+    scheduleAutoSync();
+  }
+  function commit() { clearTimeout(timer); timer = null; if (dirty) flush(); }
+
+  /* ---------- header ---------- */
+  function weekDays(k) { var d = parse(k); var start = addDays(k, -((d.getDay() + 6) % 7)); var a = []; for (var i = 0; i < 7; i++) a.push(addDays(start, i)); return a; }
+  function renderHead() {
+    $('#dlabel').textContent = state.date === TODAY ? 'Today' : state.date === addDays(TODAY, -1) ? 'Yesterday' : 'Earlier entry';
+    $('#dtitle').textContent = pretty(state.date);
+    $('#next').disabled = state.date >= TODAY;
+    renderStrip(); renderPlan();
+  }
+  function renderStrip() {
+    $('#strip').innerHTML = weekDays(state.date).map(function (k) {
+      var d = parse(k);
+      var cls = (!isEmpty(entries[k]) ? 'filled ' : '') + (k === state.date ? 'sel' : '');
+      return '<button type="button" data-d="' + k + '" class="' + cls + '"' + (k > TODAY ? ' disabled' : '') + ' aria-label="' + esc(pretty(k)) + '"><span class="dow">' + DOW[d.getDay()] + '</span><span class="dot">' + d.getDate() + '</span></button>';
+    }).join('');
+  }
+  function renderPlan() {
+    var e = entries[addDays(state.date, -1)];
+    var t = e && e.tomorrow;
+    $('#plan').hidden = !t;
+    if (t) $('#plan-text').textContent = t;
+  }
+  function goDate(k) {
+    if (k > TODAY || k === state.date) return;
+    commit();
+    state.date = k;
+    fillForm(entries[k]);
+    renderHead();
+    setStatus('');
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- week review ---------- */
+  function sqRow(days, field) {
+    return '<div class="sq">' + days.map(function (k) {
+      var v = entries[k] && entries[k][field];
+      var c = v === 'yes' ? 'y' : v === 'sofar' ? 's' : v === 'no' ? 'n0' : 'x';
+      return '<span class="' + c + '" title="' + esc(short(k)) + '"></span>';
+    }).join('') + '</div>';
+  }
+  function dayLetters(days, style) { return '<div class="sqd"' + (style ? ' style="' + style + '"' : '') + '>' + days.map(function (k) { return '<span>' + DOW[parse(k).getDay()] + '</span>'; }).join('') + '</div>'; }
+  function renderWeek() {
+    var end = addDays(TODAY, -7 * state.weekOffset);
+    var days = []; for (var i = 6; i >= 0; i--) days.push(addDays(end, -i));
+    $('#wk-title').textContent = state.weekOffset === 0 ? 'Last 7 days' : short(days[0]) + ' to ' + short(days[6]);
+    $('#wk-next').disabled = state.weekOffset === 0;
+    var es = days.map(function (k) { return entries[k]; });
+    var written = es.filter(function (e) { return !isEmpty(e); }).length;
+    var body = $('#wk-body');
+    if (!written) { body.innerHTML = '<div class="empty">No entries in this period yet. Write tonight’s entry on the Today tab and the week will fill in here.</div>'; return; }
+
+    function count(f) { return es.filter(function (e) { return e && e[f] === 'yes'; }).length; }
+    function answered(f) { return es.filter(function (e) { return e && e[f]; }).length; }
+    var h = '';
+    h += '<div class="block"><h3>Entries written</h3><div class="sq">' + days.map(function (k) { return '<span class="' + (!isEmpty(entries[k]) ? 'y' : 'x') + '" title="' + esc(short(k)) + '"></span>'; }).join('') + '</div>' + dayLetters(days) + '<div class="legend">' + written + ' of 7 days. Gaps are fine.</div></div>';
+
+    h += '<div class="block"><h3>Body and health</h3>';
+    [['move', 'Exercise'], ['sleep', 'Sleep'], ['eat', 'Eating']].forEach(function (r) {
+      h += '<div class="metric"><span class="rl">' + r[1] + '</span><div>' + sqRow(days, r[0]) + '</div><span class="n">' + count(r[0]) + '/' + answered(r[0]) + '</span></div>';
+    });
+    h += dayLetters(days, 'margin-left:86px;margin-right:46px');
+    h += '<div class="legend">Filled = yes, half = so-so, outline = no, dashed = not answered</div></div>';
+
+    function listBlock(title, flag, what) {
+      var withText = days.filter(function (k) { var e = entries[k]; return e && e[flag] === 'yes' && e[what]; });
+      var s = '<div class="block"><h3>' + title + '</h3><div class="metric" style="grid-template-columns:1fr auto"><div>' + sqRow(days, flag) + dayLetters(days) + '</div><span class="n">' + count(flag) + '/' + answered(flag) + '</span></div>';
+      if (withText.length) s += '<ul class="items">' + withText.map(function (k) { return '<li><span class="when">' + esc(short(k)) + '</span>' + esc(entries[k][what]) + '</li>'; }).join('') + '</ul>';
+      return s + '</div>';
+    }
+    h += listBlock('Outside my comfort zone', 'comfort', 'comfortWhat');
+    h += listBlock('Something kind for someone', 'kind', 'kindWhat');
+
+    var freq = {};
+    es.forEach(function (e) { if (e && e.feel) e.feel.split(',').forEach(function (w) { w = w.trim().toLowerCase(); if (w) freq[w] = (freq[w] || 0) + 1; }); });
+    var fw = Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; });
+    if (fw.length) h += '<div class="block"><h3>How the week felt</h3><div class="chips">' + fw.map(function (w) { return '<span class="chip static">' + esc(w) + (freq[w] > 1 ? ' ×' + freq[w] : '') + '</span>'; }).join('') + '</div></div>';
+
+    function textList(title, f) {
+      var items = days.filter(function (k) { var e = entries[k]; return e && e[f]; });
+      if (!items.length) return '';
+      return '<div class="block"><h3>' + title + '</h3><ul class="items">' + items.map(function (k) { return '<li><span class="when">' + esc(short(k)) + '</span>' + esc(entries[k][f]) + '</li>'; }).join('') + '</ul></div>';
+    }
+    h += textList('Happy or proud', 'proud');
+    h += textList('Could have done better', 'better');
+    h += '<div class="block"><div class="prompt">Read the “could have done better” list again. Does the same thing show up twice? That repeat is usually the one worth changing.</div></div>';
+    body.innerHTML = h;
+  }
+
+  /* ---------- history ---------- */
+  var HB = { yes: 'Yes', sofar: 'So-so', no: 'No' };
+  function entryHtml(e) {
+    var parts = [];
+    function add(label, v) { if (v) parts.push('<div><b>' + label + '</b><p>' + esc(v) + '</p></div>'); }
+    function wh(flag, what) { return (flag ? HB[flag] : '') + (what ? (flag ? ' – ' : '') + what : ''); }
+    add('Happy or proud', e.proud); add('Other things', e.other); add('Could have done better', e.better);
+    add('Body and health', [['Exercise', e.move], ['Sleep', e.sleep], ['Eating', e.eat]].filter(function (r) { return r[1]; }).map(function (r) { return r[0] + ': ' + HB[r[1]]; }).join('  ·  '));
+    add('Outside comfort zone', wh(e.comfort, e.comfortWhat)); add('Something kind', wh(e.kind, e.kindWhat));
+    add('Feeling', e.feel); add('Tomorrow', e.tomorrow);
+    return parts.join('');
+  }
+  function renderHistory() {
+    var q = $('#search').value.trim().toLowerCase();
+    var keys = Object.keys(entries).filter(function (k) { return !isEmpty(entries[k]); }).sort().reverse();
+    if (q) keys = keys.filter(function (k) { var e = entries[k]; return TEXT.concat(['date']).some(function (f) { return e[f] && String(e[f]).toLowerCase().indexOf(q) > -1; }); });
+    var body = $('#hist-body');
+    if (!keys.length) { body.innerHTML = '<div class="empty">' + (q ? 'Nothing matches that search.' : 'Entries you save will be listed here, newest first.') + '</div>'; return; }
+    var shown = keys.slice(0, state.histLimit);
+    body.innerHTML = shown.map(function (k) {
+      var e = entries[k], lead = e.proud || e.other || e.feel || e.tomorrow || '';
+      return '<details class="entry"><summary><span class="sd">' + esc(pretty(k)) + (e.feel ? ' · ' + esc(e.feel) : '') + '</span><span class="st">' + esc(lead.length > 110 ? lead.slice(0, 110) + '…' : lead) + '</span></summary><div class="full">' + entryHtml(e) + '<div><button class="btn" type="button" data-open="' + k + '">Edit this day</button></div></div></details>';
+    }).join('') + (keys.length > shown.length ? '<div style="padding-block:16px"><button class="btn" id="more" type="button">Show older entries</button></div>' : '');
+  }
+
+  /* ---------- backup ---------- */
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+  function exportText() {
+    var keys = Object.keys(entries).filter(function (k) { return !isEmpty(entries[k]); }).sort();
+    return keys.map(function (k) {
+      var e = entries[k], l = ['## ' + DocSync.prettyDate(k)];
+      function a(t, v) { if (v) l.push('**' + t + '**\n' + v); }
+      function wh(flag, what) { return (flag ? HB[flag] : '') + (what ? (flag ? ' - ' : '') + what : ''); }
+      a('Happy or proud', e.proud); a('Other things', e.other); a('Could have done better', e.better);
+      a('Body and health', [['Exercise', e.move], ['Sleep', e.sleep], ['Eating', e.eat]].filter(function (r) { return r[1]; }).map(function (r) { return r[0] + ': ' + HB[r[1]]; }).join(', '));
+      a('Outside comfort zone', wh(e.comfort, e.comfortWhat)); a('Something kind', wh(e.kind, e.kindWhat));
+      a('Feeling', e.feel); a('Tomorrow', e.tomorrow);
+      return l.join('\n\n');
+    }).join('\n\n---\n\n');
+  }
+  function importBackup(file) {
+    var msg = $('#bk-msg');
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var obj = JSON.parse(r.result);
+        var inc = obj && obj.entries;
+        if (!obj || obj.app !== 'days-end' || !inc || typeof inc !== 'object') throw new Error('bad');
+        var added = 0;
+        Object.keys(inc).forEach(function (k) {
+          var e = inc[k];
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !e || typeof e !== 'object') return;
+          var cur = entries[k];
+          if (!cur || (e.updated || 0) > (cur.updated || 0)) { e.date = k; entries[k] = e; added++; }
+        });
+        saveEntries(); fillForm(entries[state.date]); renderHead(); renderSyncUI(); scheduleAutoSync();
+        msg.textContent = 'Restored ' + added + ' entr' + (added === 1 ? 'y' : 'ies') + '. Newer entries on this device were kept.';
+      } catch (e) { msg.textContent = 'That file is not a Day’s End backup.'; }
+    };
+    r.readAsText(file);
+  }
+
+  /* ---------- Google Doc sync ---------- */
+  var sync = { token: null, exp: 0, running: false, again: false, error: '', progress: '', lastOk: 0 };
+  function syncEnabled() { return !!(CFG.GOOGLE_CLIENT_ID && String(CFG.GOOGLE_CLIENT_ID).trim()); }
+  function tokenValid() { return !!sync.token && Date.now() < sync.exp - 60000; }
+  function pendingDates() {
+    return Object.keys(entries).filter(function (k) {
+      var e = entries[k], st = meta.synced[k];
+      if (isEmpty(e)) return st !== undefined && (e.updated || 0) > st;
+      return (e.updated || 0) > (st || 0);
+    }).sort();
+  }
+  function docUrl() { return 'https://docs.google.com/document/d/' + encodeURIComponent(meta.docId) + '/edit'; }
+
+  function loadGis() {
+    if (!syncEnabled() || window.google && window.google.accounts) return;
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.defer = true;
+    document.head.appendChild(s);
+  }
+  function requestToken() {
+    return new Promise(function (resolve, reject) {
+      if (!(window.google && google.accounts && google.accounts.oauth2)) { reject(new Error('Google sign-in could not load. Check your connection and try again.')); return; }
+      var tc = google.accounts.oauth2.initTokenClient({
+        client_id: String(CFG.GOOGLE_CLIENT_ID).trim(),
+        scope: SCOPE,
+        prompt: meta.consented ? '' : 'consent',
+        callback: function (r) {
+          if (r.error) { reject(new Error(r.error)); return; }
+          if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(r, SCOPE)) { reject(new Error('Permission to create the journal doc was not granted.')); return; }
+          sync.token = r.access_token; sync.exp = Date.now() + (Number(r.expires_in) || 3600) * 1000;
+          meta.consented = true; saveMeta(); resolve();
+        },
+        error_callback: function (e) { reject(new Error(e && e.type === 'popup_closed' ? 'Sign-in was closed before it finished.' : 'The Google sign-in window could not open.')); }
+      });
+      tc.requestAccessToken();
+    });
+  }
+  function getApi() {
+    return DocSync.makeApi(function (u, o) { return fetch(u, o); }, function () {
+      if (!tokenValid()) { var e = new Error('auth'); e.code = 'auth'; return Promise.reject(e); }
+      return Promise.resolve(sync.token);
+    });
+  }
+  async function runSync() {
+    if (sync.running) { sync.again = true; return; }
+    if (!syncEnabled() || !tokenValid()) { renderSyncUI(); return; }
+    sync.running = true; sync.error = ''; renderSyncUI();
+    try {
+      var api = getApi();
+      if (!meta.docId) { var d = await api.createDoc(CFG.DOC_TITLE || 'Day’s End Journal'); meta.docId = d.documentId; meta.synced = {}; saveMeta(); }
+      var dates = pendingDates();
+      for (var i = 0; i < dates.length; i++) {
+        var k = dates[i], e = entries[k];
+        sync.progress = 'Sending ' + (i + 1) + ' of ' + dates.length; renderSyncUI();
+        var stamp = e.updated || 0;
+        await DocSync.syncEntry(api, meta.docId, e);
+        meta.synced[k] = stamp; saveMeta();
+      }
+      sync.lastOk = Date.now();
+    } catch (err) {
+      if (err.code === 'auth') { sync.token = null; sync.error = 'Google sign-in expired. Tap to sign in again.'; }
+      else if (err.status === 404 || err.status === 403) sync.error = 'doc';
+      else sync.error = err.message || 'Sync failed.';
+    }
+    sync.running = false; sync.progress = '';
+    if (sync.again) { sync.again = false; if (!sync.error && tokenValid() && pendingDates().length) { runSync(); return; } }
+    renderSyncUI();
+  }
+  var autoTimer = null;
+  function scheduleAutoSync() {
+    if (!syncEnabled() || !meta.docId) return;
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(function () { if (tokenValid()) runSync(); else renderSyncUI(); }, 3000);
+  }
+  async function connectAndSync(userTapped) {
+    sync.error = '';
+    try { await requestToken(); } catch (err) { sync.error = err.message; renderSyncUI(); return; }
+    runSync();
+  }
+
+  function renderSyncUI() {
+    var line = $('#syncline'), body = $('#set-google-body');
+    var n = pendingDates().length;
+    var h = '';
+    if (!syncEnabled()) {
+      line.hidden = true;
+      body.innerHTML = '<p class="small">Google Doc sync is not switched on in this copy of the app. Everything still works and is saved on this device.</p>';
+    } else if (!meta.docId) {
+      line.hidden = true;
+      body.innerHTML = '<p class="small">Keep a copy of every entry in a Google Doc in your own Google Drive, updated as you write. You sign in with your own Google account. The app can only see the one doc it creates.</p>' +
+        '<div class="pager"><button class="btn primary" id="g-connect" type="button">Connect a Google Doc</button></div>' +
+        (sync.error ? '<p class="err">' + esc(sync.error) + '</p>' : '');
+    } else {
+      var st;
+      if (sync.running) st = (sync.progress || 'Sending…');
+      else if (sync.error === 'doc') st = '';
+      else if (n === 0) st = 'Up to date' + (sync.lastOk ? ' (' + new Date(sync.lastOk).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ')' : '');
+      else st = n + (n === 1 ? ' entry' : ' entries') + ' waiting';
+      if (sync.error === 'doc') {
+        h += '<p class="err">The journal doc could not be reached. It may have been deleted, or access was removed.</p><div class="pager"><button class="btn primary" id="g-newdoc" type="button">Start a new doc</button></div>';
+      } else {
+        h += '<p>Writing to <a href="' + esc(docUrl()) + '" target="_blank" rel="noopener">your Google Doc</a>. ' + esc(st) + '.</p>';
+        if (sync.error) h += '<p class="err">' + esc(sync.error) + '</p>';
+        h += '<div class="pager"><button class="btn primary" id="g-sync" type="button"' + (sync.running ? ' disabled' : '') + '>' + (tokenValid() ? 'Send now' : 'Sign in and send') + '</button><button class="btn quiet" id="g-newdoc" type="button">Use a new doc</button></div>';
+        h += '<p class="small">The doc is rewritten from this app, so change entries here, not in the doc. Google asks you to sign in again about once an hour, so entries wait here until you tap Send.</p>';
+      }
+      body.innerHTML = h;
+      var show = sync.error !== 'doc' && (n > 0 || sync.running);
+      line.hidden = !show;
+      if (show) {
+        if (sync.running) line.textContent = 'Google Doc: ' + (sync.progress || 'sending…');
+        else if (tokenValid()) line.textContent = 'Google Doc: ' + n + ' waiting';
+        else line.innerHTML = 'Google Doc: ' + n + (n === 1 ? ' entry' : ' entries') + ' waiting <button type="button" id="g-line">Tap to sync</button>';
+      }
+    }
+  }
+
+  /* ---------- install tip ---------- */
+  var deferredPrompt = null;
+  function setupInstall() {
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    var tip = $('#install-tip');
+    if (standalone) tip.textContent = 'You are using the installed app. Your entries stay on this device.';
+    else if (ios) tip.textContent = 'In Safari, tap the Share button, then “Add to Home Screen”. Installing also stops Safari from clearing your entries after a week of not opening the page.';
+    else tip.textContent = 'In Chrome, open the menu and choose “Install app” or “Add to Home screen”.';
+    window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferredPrompt = e; $('#install-btn').hidden = false; });
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+  }
+
+  /* ---------- tabs ---------- */
+  function showTab(t) {
+    state.tab = t;
+    ['today', 'week', 'history', 'settings'].forEach(function (n) { $('#view-' + n).hidden = n !== t; });
+    $$('.tabs button').forEach(function (b) { if (b.getAttribute('data-tab') === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+    if (t === 'week') renderWeek();
+    if (t === 'history') renderHistory();
+    if (t === 'settings') renderSyncUI();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('button');
+    if (!t) return;
+    if (t.matches('.seg button')) {
+      var name = t.parentNode.getAttribute('data-seg');
+      setSeg(name, t.getAttribute('aria-pressed') === 'true' ? '' : t.getAttribute('data-v'));
+      schedule(); return;
+    }
+    if (t.matches('#chips .chip')) {
+      var w = t.getAttribute('data-w'), list = feelWords(), i = list.indexOf(w);
+      if (i > -1) list.splice(i, 1); else list.push(w);
+      $('#feel').value = list.join(', '); syncChips(); schedule(); return;
+    }
+    if (t.matches('#strip button')) { goDate(t.getAttribute('data-d')); return; }
+    if (t.id === 'prev') { goDate(addDays(state.date, -1)); return; }
+    if (t.id === 'next') { goDate(addDays(state.date, 1)); return; }
+    if (t.matches('.tabs button')) { commit(); showTab(t.getAttribute('data-tab')); return; }
+    if (t.id === 'wk-prev') { state.weekOffset++; renderWeek(); return; }
+    if (t.id === 'wk-next') { if (state.weekOffset > 0) state.weekOffset--; renderWeek(); return; }
+    if (t.id === 'more') { state.histLimit += 40; renderHistory(); return; }
+    if (t.hasAttribute('data-open')) { var k = t.getAttribute('data-open'); showTab('today'); goDate(k); return; }
+    if (t.id === 'bk-export') { commit(); download('days-end-backup-' + keyOf(new Date()) + '.json', JSON.stringify({ app: 'days-end', version: 1, exported: new Date().toISOString(), entries: entries }, null, 2), 'application/json'); $('#bk-msg').textContent = 'Backup file created.'; return; }
+    if (t.id === 'bk-text') { commit(); var tx = exportText(); if (!tx) { $('#bk-msg').textContent = 'Nothing to save yet.'; return; } download('days-end-journal.md', tx, 'text/markdown'); $('#bk-msg').textContent = 'Text file created.'; return; }
+    if (t.id === 'bk-import') { $('#bk-file').click(); return; }
+    if (t.id === 'install-btn' && deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; t.hidden = true; return; }
+    if (t.id === 'g-connect' || t.id === 'g-sync' || t.id === 'g-line') { commit(); if (tokenValid()) runSync(); else connectAndSync(true); return; }
+    if (t.id === 'g-newdoc') { meta.docId = null; meta.synced = {}; saveMeta(); sync.error = ''; renderSyncUI(); if (tokenValid()) runSync(); else connectAndSync(true); return; }
+  });
+  document.addEventListener('input', function (ev) {
+    var t = ev.target;
+    if (t.id === 'search') { state.histLimit = 40; renderHistory(); return; }
+    if (t.matches('#form [data-f]')) { if (t.tagName === 'TEXTAREA') autosize(t); if (t.id === 'feel') syncChips(); schedule(); }
+  });
+  $('#bk-file').addEventListener('change', function (e) { if (e.target.files && e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ''; });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) commit(); else { renderHead(); renderSyncUI(); } });
+  window.addEventListener('pagehide', commit);
+  window.addEventListener('storage', function (e) {
+    if (e.key === K_ENTRIES && !dirty) { entries = loadJSON(K_ENTRIES, {}); fillForm(entries[state.date]); renderHead(); renderSyncUI(); }
+  });
+
+  /* ---------- start ---------- */
+  buildChips(); fillForm(entries[state.date]); renderHead(); renderSyncUI(); setupInstall(); loadGis();
+  if (!storageOk) { var b = $('#banner'); b.hidden = false; b.textContent = 'This browser is blocking storage, so entries cannot be saved. Turn off private browsing, or open the page in a normal tab.'; }
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+})();
+</script>
+</body>
+</html>
