@@ -1,5 +1,5 @@
 /* Day's End service worker: keeps the app working offline. Bump VERSION when you upload a new copy. */
-var VERSION = 'dayend-v1';
+var VERSION = 'dayend-v2';
 var ASSETS = ['./', './index.html', './docsync.js', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
